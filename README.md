@@ -82,21 +82,27 @@ text_message_clicks, website_clicks.
 
 **The tap accepts the following config options:**
 
-- **`ig_user_ids: List[str]` (required)**: List of user IDs of Instagram Business Accounts or Instagram Creator Accounts. One way to 
-find the user ID is by navigating to
-> [Facebook Business Manager Settings](https://business.facebook.com/settings) > Accounts > Instagram accounts > [Your Account]
+- **`ig_user_ids: List[str]` (optional)**: A list of user IDs for the Instagram Business or Creator accounts you want to sync. If you don't provide this, the tap will automatically discover all Instagram accounts associated with your `access_token`.
 
-and you will see the user ID in the URL - https://business.facebook.com/instagram-account-v2s/{user_id}?business_id={business_id}
+- **`access_token: str` (required)**: A long-lived **user access token**. You can get one by following [these instructions](https://developers.facebook.com/docs/pages/access-tokens).
 
-- **`access_token: str` (required)**: A long-lived **user access token**, which can be obtained by following 
-[these instructions](https://developers.facebook.com/docs/pages/access-tokens). Ensure the access token has the 
-following permissions:
-  - `instagram_basic`
-  - `instagram_manage_insights`
-  - `pages_show_list`
-  - `pages_read_engagement`
+  **NOTE: You will need to create a Facebook App if you do not have one already to be able to generate an access token.**
 
-  **NOTE: You will need to create a Facebook App if you do not have one already to be able to generate an access token**
+### A Note on Permissions and Account Visibility
+
+When generating your `access_token`, it is highly recommended to include the `business_management` permission in addition to the ones listed below. This helps ensure that the API can see all the accounts associated with your Facebook Business Manager.
+
+- `instagram_basic`
+- `instagram_manage_insights`
+- `pages_show_list`
+- `pages_read_engagement`
+- `business_management`
+
+If you run the tap and find that some of your Instagram accounts are missing, it is likely due to a permissions issue. Facebook requires you to explicitly grant your app access to each page. You can do this in your Facebook settings under **Business Integrations**:
+
+1.  Go to [Business Integrations](https://www.facebook.com/settings?tab=business_tools).
+2.  Click "View and edit" for your app.
+3.  In the window that opens, scroll down to the section "Show a list of the Pages you manage" and make sure all the pages you want to access are checked.
 
 A full list of supported settings and capabilities for this
 tap is available by running:

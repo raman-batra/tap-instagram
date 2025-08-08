@@ -104,6 +104,16 @@ If you run the tap and find that some of your Instagram accounts are missing, it
 2.  Click "View and edit" for your app.
 3.  In the window that opens, scroll down to the section "Show a list of the Pages you manage" and make sure all the pages you want to access are checked.
 
+### Generating an Access Token with the OAuth URL
+
+To generate an access token, you can use the following URL in your browser. Replace `{your-app-id}` and `{your-redirect-uri}` with your app's information.
+
+```
+https://www.facebook.com/v20.0/dialog/oauth?client_id={your-app-id}&redirect_uri={your-redirect-uri}&scope=instagram_basic,instagram_manage_insights,pages_show_list,pages_read_engagement,business_management
+```
+
+After you authorize the app, Facebook will redirect you to your `redirect_uri` with an authorization code. You will need to exchange this code for a short-lived access token, and then exchange the short-lived token for a long-lived one.
+
 A full list of supported settings and capabilities for this
 tap is available by running:
 

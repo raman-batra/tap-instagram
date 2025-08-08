@@ -16,7 +16,14 @@ from tap_instagram.client import InstagramStream
 class UsersStream(InstagramStream):
     """Define custom stream."""
 
-    name = "users"
+    def __init__(self, tap, ig_user_id: str, **kwargs):
+        self.ig_user_id = ig_user_id
+        super().__init__(tap, **kwargs)
+
+    @property
+    def name(self) -> str:
+        return f"users_{self.ig_user_id}"
+
     path = "/{user_id}"
     primary_keys = ["id"]
     replication_key = None
@@ -42,8 +49,8 @@ class UsersStream(InstagramStream):
     ).to_dict()
 
     @property
-    def partitions(self) -> Optional[List[dict]]:
-        return [{"user_id": user_id} for user_id in self.config["ig_user_ids"]]
+    def partitions(self) -> List[dict]:
+        return [{"user_id": self.ig_user_id}]
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -59,7 +66,14 @@ class UsersStream(InstagramStream):
 class MediaStream(InstagramStream):
     """Define custom stream."""
 
-    name = "media"
+    def __init__(self, tap, ig_user_id: str, **kwargs):
+        self.ig_user_id = ig_user_id
+        super().__init__(tap, **kwargs)
+
+    @property
+    def name(self) -> str:
+        return f"media_{self.ig_user_id}"
+
     path = "/{user_id}/media"  # user_id is populated using child context keys from UsersStream
     parent_stream_type = UsersStream
     primary_keys = ["id"]
@@ -217,7 +231,14 @@ class MediaStream(InstagramStream):
 class StoriesStream(InstagramStream):
     """Define custom stream."""
 
-    name = "stories"
+    def __init__(self, tap, ig_user_id: str, **kwargs):
+        self.ig_user_id = ig_user_id
+        super().__init__(tap, **kwargs)
+
+    @property
+    def name(self) -> str:
+        return f"stories_{self.ig_user_id}"
+
     path = "/{user_id}/stories"  # user_id is populated using child context keys from UsersStream
     parent_stream_type = UsersStream
     primary_keys = ["id"]
@@ -363,7 +384,10 @@ class StoriesStream(InstagramStream):
 class MediaChildrenStream(MediaStream):
     """Define custom stream."""
 
-    name = "media_children"
+    @property
+    def name(self) -> str:
+        return f"media_children_{self.ig_user_id}"
+
     parent_stream_type = MediaStream
     state_partitioning_keys = ["user_id"]
     path = "/{media_id}/children"  # media_id is populated using child context keys from MediaStream
@@ -396,7 +420,14 @@ class MediaChildrenStream(MediaStream):
 class MediaInsightsStream(InstagramStream):
     """Define custom stream."""
 
-    name = "media_insights"
+    def __init__(self, tap, ig_user_id: str, **kwargs):
+        self.ig_user_id = ig_user_id
+        super().__init__(tap, **kwargs)
+
+    @property
+    def name(self) -> str:
+        return f"media_insights_{self.ig_user_id}"
+
     path = "/{media_id}/insights"
     parent_stream_type = MediaStream
     state_partitioning_keys = ["user_id"]
@@ -572,7 +603,14 @@ class MediaInsightsStream(InstagramStream):
 class StoryInsightsStream(InstagramStream):
     """Define custom stream."""
 
-    name = "story_insights"
+    def __init__(self, tap, ig_user_id: str, **kwargs):
+        self.ig_user_id = ig_user_id
+        super().__init__(tap, **kwargs)
+
+    @property
+    def name(self) -> str:
+        return f"story_insights_{self.ig_user_id}"
+
     path = "/{media_id}/insights"
     parent_stream_type = StoriesStream
     state_partitioning_keys = ["user_id"]
@@ -720,6 +758,10 @@ class StoryInsightsStream(InstagramStream):
 
 
 class UserInsightsStream(InstagramStream):
+    def __init__(self, tap, ig_user_id: str, **kwargs):
+        self.ig_user_id = ig_user_id
+        super().__init__(tap, **kwargs)
+
     parent_stream_type = UsersStream
     path = "/{user_id}/insights"  # user_id is populated using child context keys from UsersStream
     primary_keys = ["id"]
@@ -866,7 +908,10 @@ class UserInsightsStream(InstagramStream):
 class UserInsightsOnlineFollowersStream(UserInsightsStream):
     """Define custom stream."""
 
-    name = "user_insights_online_followers"
+    @property
+    def name(self) -> str:
+        return f"user_insights_online_followers_{self.ig_user_id}"
+
     metrics = ["online_followers"]
     time_period = "lifetime"
     # TODO: Add note about online_followers seemingly only going back 30 days
@@ -889,7 +934,10 @@ class UserInsightsOnlineFollowersStream(UserInsightsStream):
 class UserInsightsFollowersStream(UserInsightsStream):
     """Define custom stream."""
 
-    name = "user_insights_followers"
+    @property
+    def name(self) -> str:
+        return f"user_insights_followers_{self.ig_user_id}"
+
     metrics = ["follower_count"]
     time_period = "day"
     min_start_date = pendulum.now("UTC").subtract(days=30)
@@ -898,7 +946,10 @@ class UserInsightsFollowersStream(UserInsightsStream):
 class UserInsightsDailyStream(UserInsightsStream):
     """Define custom stream."""
 
-    name = "user_insights_daily"
+    @property
+    def name(self) -> str:
+        return f"user_insights_daily_{self.ig_user_id}"
+
     metrics = [
         "email_contacts",
         "get_directions_clicks",
@@ -915,7 +966,10 @@ class UserInsightsDailyStream(UserInsightsStream):
 class UserInsightsWeeklyStream(UserInsightsStream):
     """Define custom stream."""
 
-    name = "user_insights_weekly"
+    @property
+    def name(self) -> str:
+        return f"user_insights_weekly_{self.ig_user_id}"
+
     metrics = [
         "impressions",
         "reach",
@@ -926,7 +980,10 @@ class UserInsightsWeeklyStream(UserInsightsStream):
 class UserInsights28DayStream(UserInsightsStream):
     """Define custom stream."""
 
-    name = "user_insights_28day"
+    @property
+    def name(self) -> str:
+        return f"user_insights_28day_{self.ig_user_id}"
+
     metrics = [
         "impressions",
         "reach",

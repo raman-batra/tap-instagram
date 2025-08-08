@@ -53,8 +53,7 @@ class TapInstagram(Tap):
         ),
         th.Property(
             "ig_user_ids",
-            th.ArrayType(th.IntegerType),
-            required=True,
+            th.ArrayType(th.StringType),
             description="User IDs of the Instagram accounts to replicate",
         ),
         th.Property(
@@ -76,25 +75,39 @@ class TapInstagram(Tap):
         ),
     ).to_dict()
 
-    @property
-    def access_tokens(self) -> Dict[str, str]:
-        return {
-            user_id: self._exchange_token(user_id)
-            for user_id in self.config.get("ig_user_ids")
-        }
-
-    def _exchange_token(self, user_id: str):
-        url = BASE_URL.format(ig_user_id=user_id)
-        data = {
-            "fields": "access_token,name",
-            "access_token": self.config.get("access_token"),
-        }
-        self.logger.info(f"Exchanging access token for user: {user_id}")
-        response = session.get(url=url, params=data)
+    def _get_ig_user_ids(self) -> List[str]:
+        if self.config.get("ig_user_ids"):
+            return self.config["ig_user_ids"]
+        self.logger.info("`ig_user_ids` not found in config, fetching from API.")
+        url = "https://graph.facebook.com/me/accounts"
+        params = {"access_token": self.config["access_token"]}
+        response = requests.get(url, params=params)
         response.raise_for_status()
-        self.logger.info(f"Successfully exchanged token for user: {user_id}")
-        return response.json().get("access_token")
+        accounts = response.json()["data"]
+        ids = []
+        for account in accounts:
+            page_id = account["id"]
+            page_url = f"https://graph.facebook.com/{page_id}"
+            page_params = {
+                "fields": "instagram_business_account",
+                "access_token": self.config["access_token"],
+            }
+            page_response = requests.get(page_url, params=page_params)
+            page_response.raise_for_status()
+            ig_account = page_response.json().get("instagram_business_account")
+            if ig_account:
+                ids.append(ig_account["id"])
+        self.logger.info(f"Found {len(ids)} Instagram accounts.")
+        return ids
+
+    @property
+    def ig_user_ids(self) -> List[str]:
+        return self._get_ig_user_ids()
 
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""
-        return [stream_class(tap=self) for stream_class in STREAM_TYPES]
+        return [
+            stream_class(tap=self, ig_user_id=ig_user_id)
+            for stream_class in STREAM_TYPES
+            for ig_user_id in self.ig_user_ids
+        ]

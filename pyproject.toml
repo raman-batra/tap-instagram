@@ -41,3 +41,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 # CLI declaration
 tap-instagram = 'tap_instagram.tap:TapInstagram.cli'
+tap-instagram-v2 = 'tap_instagram.tap:TapInstagram.cli'

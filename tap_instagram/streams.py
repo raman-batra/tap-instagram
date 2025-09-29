@@ -188,21 +188,18 @@ class MediaStream(InstagramStream):
         ),
     ).to_dict()
 
-    def make_since_param(self, context: Optional[dict]) -> datetime:
-        state_ts = self.get_starting_timestamp(context)
-        if state_ts:
-            return pendulum.instance(state_ts).subtract(
-                days=self.config["media_insights_lookback_days"]
-            )
-        else:
-            return state_ts
-
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         params = super().get_url_params(context, next_page_token)
         params["fields"] = ",".join(self.fields)
-        params["since"] = self.make_since_param(context)
+        since = self.get_starting_timestamp(context)
+        # Insights are only available for media posted within the last 2 years.
+        api_max_lookback = pendulum.now("UTC").subtract(years=2)
+        if since:
+            params["since"] = max(since, api_max_lookback)
+        else:
+            params["since"] = api_max_lookback
         return params
 
     def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
@@ -794,8 +791,10 @@ class UserInsightsStream(InstagramStream):
 
         Returns: DateTime objects for "since" and "until"
         """
+        api_max_lookback = pendulum.now("UTC").subtract(years=2)
         try:
-            since = min(max(self.get_starting_timestamp(context), min_since), max_until)
+            start_from = self.get_starting_timestamp(context) or min_since
+            since = min(max(start_from, min_since, api_max_lookback), max_until)
             window_end = min(
                 self.get_replication_key_signpost(context),
                 pendulum.instance(since).add(seconds=max_time_window.seconds),
@@ -803,7 +802,7 @@ class UserInsightsStream(InstagramStream):
         # seeing cases where self.get_starting_timestamp() is null
         # possibly related to target-bigquery pushing malformed state - https://gitlab.com/meltano/sdk/-/issues/300
         except TypeError:
-            since = min_since
+            since = max(min_since, api_max_lookback)
             window_end = pendulum.instance(since).add(seconds=max_time_window.seconds)
         until = min(window_end, max_until)
         return since, until
@@ -861,29 +860,31 @@ class UserInsightsStream(InstagramStream):
                         yield values
 
 
-class UserInsightsOnlineFollowersStream(UserInsightsStream):
+class UserInsightsLifetimeStream(UserInsightsStream):
     """Define custom stream."""
 
-    name = "user_insights_online_followers"
     replication_key = None
-
-    metrics = ["online_followers"]
     time_period = "lifetime"
     has_pagination = False
 
 
-# class UserInsightsAudienceStream(UserInsightsStream):
-#     """Define custom stream."""
-#
-#     name = "user_insights_audience"
-#     metrics = [
-#         "audience_city",
-#         "audience_country",
-#         "audience_gender_age",
-#         "audience_locale",
-#     ]
-#     time_period = "lifetime"
-#     has_pagination = False
+class UserInsightsOnlineFollowersStream(UserInsightsLifetimeStream):
+    """Define custom stream."""
+
+    name = "user_insights_online_followers"
+    metrics = ["online_followers"]
+
+
+class UserInsightsAudienceStream(UserInsightsLifetimeStream):
+    """Define custom stream."""
+
+    name = "user_insights_audience"
+    metrics = [
+        "audience_city",
+        "audience_country",
+        "audience_gender_age",
+        "audience_locale",
+    ]
 
 
 class UserInsightsFollowersStream(UserInsightsStream):

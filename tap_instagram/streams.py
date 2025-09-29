@@ -893,7 +893,10 @@ class UserInsightsFollowersStream(UserInsightsStream):
     name = "user_insights_followers"
     metrics = ["follower_count"]
     time_period = "day"
-    min_start_date = pendulum.now("UTC").subtract(days=30)
+
+    @property
+    def min_start_date(self) -> datetime:
+        return pendulum.now("UTC").subtract(days=30)
 
 
 class UserInsightsDailyStream(UserInsightsStream):

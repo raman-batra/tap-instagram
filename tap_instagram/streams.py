@@ -499,18 +499,16 @@ class MediaInsightsStream(InstagramStream):
                 metrics = [
                     "impressions",
                     "reach",
-                    "saved",
                 ]
                 if media_type == "VIDEO":
-                    metrics.append("video_views")
-                else:
-                    metrics.append("total_interactions")
+                    metrics.extend(["saved", "video_views"])
                 return metrics
         elif media_type == "CAROUSEL_ALBUM":
             return [
-                "impressions",
-                "reach",
-                "saved",
+                "carousel_album_engagement",
+                "carousel_album_impressions",
+                "carousel_album_reach",
+                "carousel_album_saved",
                 "video_views",
             ]
         else:
@@ -529,24 +527,16 @@ class MediaInsightsStream(InstagramStream):
         return params
 
     def validate_response(self, response: requests.Response) -> None:
-        if response.json().get("error", {}).get(
-            "error_user_title"
-        ) == "Media posted before business account conversion" or "(#10) Not enough viewers for the media to show insights" in str(
-            response.json().get("error", {}).get("message")
-        ):
-            self.logger.warning(f"Skipping: {response.json()['error']}")
+        if response.status_code == 400:
+            self.logger.warning(
+                f"Skipping record due to 400 error: {response.json().get('error')}"
+            )
             return
         super().validate_response(response)
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         resp_json = response.json()
-        # Handle the specific case where FB returns error because media was posted before business acct creation
-        # TODO: Refactor to raise a specific error in validate_response and handle that instead
-        if resp_json.get("error", {}).get(
-            "error_user_title"
-        ) == "Media posted before business account conversion" or "(#10) Not enough viewers for the media to show insights" in str(
-            resp_json.get("error", {}).get("message")
-        ):
+        if "data" not in resp_json:
             return
         for row in resp_json["data"]:
             base_item = {
@@ -656,39 +646,12 @@ class StoryInsightsStream(InstagramStream):
 
     @staticmethod
     def _metrics_for_media_type(media_type: str, media_product_type: str):
-        # TODO: Define types for these function args
-        if media_type in ("IMAGE", "VIDEO"):
-            if media_product_type == "STORY":
-                return [
-                    # "exits",
-                    "impressions",
-                    "reach",
-                    "replies",
-                    # "taps_forward",
-                    # "taps_back",
-                ]
-            else:  # media_product_type is "AD" or "FEED"
-                metrics = [
-                    "total_interactions",
-                    "impressions",
-                    "reach",
-                    "saved",
-                ]
-                if media_type == "VIDEO":
-                    metrics.append("video_views")
-                return metrics
-        elif media_type == "CAROUSEL_ALBUM":
-            return [
-                "total_interactions",
-                "impressions",
-                "reach",
-                "saved",
-                "video_views",
-            ]
-        else:
-            raise ValueError(
-                f"media_type from parent record must be one of IMAGE, VIDEO, CAROUSEL_ALBUM, got: {media_type}"
-            )
+        # Story insights are simple and don't vary by media type (IMAGE/VIDEO)
+        return [
+            "impressions",
+            "reach",
+            "replies",
+        ]
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -701,24 +664,16 @@ class StoryInsightsStream(InstagramStream):
         return params
 
     def validate_response(self, response: requests.Response) -> None:
-        if response.json().get("error", {}).get(
-            "error_user_title"
-        ) == "Media posted before business account conversion" or "(#10) Not enough viewers for the media to show insights" in str(
-            response.json().get("error", {}).get("message")
-        ):
-            self.logger.warning(f"Skipping: {response.json()['error']}")
+        if response.status_code == 400:
+            self.logger.warning(
+                f"Skipping record due to 400 error: {response.json().get('error')}"
+            )
             return
         super().validate_response(response)
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
         resp_json = response.json()
-        # Handle the specific case where FB returns error because media was posted before business acct creation
-        # TODO: Refactor to raise a specific error in validate_response and handle that instead
-        if resp_json.get("error", {}).get(
-            "error_user_title"
-        ) == "Media posted before business account conversion" or "(#10) Not enough viewers for the media to show insights" in str(
-            resp_json.get("error", {}).get("message")
-        ):
+        if "data" not in resp_json:
             return
         for row in resp_json["data"]:
             base_item = {
@@ -937,16 +892,27 @@ class UserInsightsDailyStream(UserInsightsStream):
 
     name = "user_insights_daily"
     metrics = [
-        "email_contacts",
-        "get_directions_clicks",
-        "impressions",
-        "phone_call_clicks",
-        "profile_views",
         "reach",
-        "text_message_clicks",
+    ]
+    time_period = "day"
+
+
+class UserInsightsTotalValueStream(UserInsightsStream):
+    """Define custom stream for metrics requiring total_value."""
+
+    name = "user_insights_total_value"
+    metrics = [
+        "profile_views",
         "website_clicks",
     ]
     time_period = "day"
+
+    def get_url_params(
+        self, context: Optional[dict], next_page_token: Optional[Any]
+    ) -> Dict[str, Any]:
+        params = super().get_url_params(context, next_page_token)
+        params["metric_type"] = "total_value"
+        return params
 
 
 class UserInsightsWeeklyStream(UserInsightsStream):
@@ -954,7 +920,6 @@ class UserInsightsWeeklyStream(UserInsightsStream):
 
     name = "user_insights_weekly"
     metrics = [
-        "impressions",
         "reach",
     ]
     time_period = "week"
@@ -965,7 +930,6 @@ class UserInsights28DayStream(UserInsightsStream):
 
     name = "user_insights_28day"
     metrics = [
-        "impressions",
         "reach",
     ]
     time_period = "days_28"

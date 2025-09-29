@@ -16,6 +16,7 @@ from tap_instagram.streams import (
     UserInsightsDailyStream,
     UserInsightsFollowersStream,
     UserInsightsOnlineFollowersStream,
+    UserInsightsTotalValueStream,
     UserInsightsWeeklyStream,
     UsersStream,
 )
@@ -30,6 +31,7 @@ STREAM_TYPES = [
     UserInsightsDailyStream,
     UserInsightsFollowersStream,
     UserInsightsOnlineFollowersStream,
+    UserInsightsTotalValueStream,
     UserInsightsWeeklyStream,
     UsersStream,
 ]

@@ -712,7 +712,6 @@ class UserInsightsStream(InstagramStream):
     replication_key = "end_time"
     records_jsonpath = "$.data[*]"
     has_pagination = True
-    min_start_date: datetime = pendulum.now("UTC").subtract(years=2).add(days=1)
     max_end_date: datetime = pendulum.today("UTC").subtract(days=1)
     max_time_window: timedelta = pendulum.duration(days=30)
     time_period: str  # TODO: Use an Enum type instead
@@ -768,6 +767,12 @@ class UserInsightsStream(InstagramStream):
         """Add ig_user_id to records."""
         row["ig_user_id"] = context["user_id"]
         return row
+
+    @property
+    def min_start_date(self) -> datetime:
+        return pendulum.now("UTC").subtract(
+            days=self.config["user_insights_lookback_days"]
+        )
 
     def _fetch_time_based_pagination_range(
         self,
@@ -861,6 +866,8 @@ class UserInsightsOnlineFollowersStream(UserInsightsStream):
     name = "user_insights_online_followers"
     metrics = ["online_followers"]
     time_period = "lifetime"
+    has_pagination = False
+    replication_key = None
     # TODO: Add note about online_followers seemingly only going back 30 days
 
 
@@ -892,7 +899,12 @@ class UserInsightsDailyStream(UserInsightsStream):
 
     name = "user_insights_daily"
     metrics = [
+        "email_contacts",
+        "get_directions_clicks",
+        "impressions",
+        "phone_call_clicks",
         "reach",
+        "text_message_clicks",
     ]
     time_period = "day"
 

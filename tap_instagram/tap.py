@@ -66,6 +66,12 @@ class TapInstagram(Tap):
             "days - defaults to 14 days if not provided",
         ),
         th.Property(
+            "user_insights_lookback_days",
+            th.IntegerType,
+            default=90,
+            description="The tap fetches user insights for the last `user_insights_lookback_days` days.",
+        ),
+        th.Property(
             "start_date",
             th.DateTimeType,
             description="The earliest record date to sync",

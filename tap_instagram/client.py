@@ -48,12 +48,32 @@ class InstagramStream(RESTStream):
 
         return next_page_token
 
+    ALLOWED_PARAMS = {
+        "access_token",
+        "after",
+        "before",
+        "limit",
+        "metric",
+        "period",
+        "metric_type",
+        "fields",
+        "since",
+        "until",
+    }
+
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
         """Return a dictionary of values to be used in URL parameterization."""
-        if next_page_token:  # TODO: understand what this does & why it works!
-            return urllib.parse.parse_qs(urllib.parse.urlparse(next_page_token).query)
+        if next_page_token:
+            parsed = urllib.parse.parse_qs(urllib.parse.urlparse(next_page_token).query)
+            # Flatten single-item lists and drop unknown params
+            cleaned = {}
+            for k, v in parsed.items():
+                if k in self.ALLOWED_PARAMS:
+                    cleaned[k] = v[0] if isinstance(v, list) and len(v) == 1 else v
+            return cleaned
+
         params: dict = {"access_token": self.config["access_token"]}
         if self.replication_key:
             params["sort"] = "asc"

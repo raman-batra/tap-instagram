@@ -1,6 +1,6 @@
 """Instagram tap class."""
 
-from typing import Dict, List
+from typing import List
 
 import requests
 from singer_sdk import Stream, Tap

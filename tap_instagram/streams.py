@@ -1,6 +1,5 @@
 """Stream type classes for tap-instagram."""
 
-import urllib.parse
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -810,22 +809,28 @@ class UserInsightsStream(InstagramStream):
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
     ) -> Dict[str, Any]:
-        # TODO: Is there a cleaner way to do this?
-        params = super().get_url_params(context, next_page_token)
-        if next_page_token:
-            return params
-        params["metric"] = ",".join(self.metrics)
-        params["period"] = self.time_period
+        # Only honor next_page_token if this stream supports pagination
+        effective_next = next_page_token if self.has_pagination else None
 
-        if self.has_pagination:
-            since, until = self._fetch_time_based_pagination_range(
-                context,
-                min_since=self.min_start_date,
-                max_until=self.max_end_date,
-                max_time_window=self.max_time_window,
-            )
-            params["since"] = since
-            params["until"] = until
+        # Build base params
+        params = super().get_url_params(context, effective_next)
+
+        # If we ignored paging, super() above returned only access_token (+ replication extras)
+        # Now add insights specifics:
+        if not effective_next:
+            params["metric"] = ",".join(self.metrics)
+            params["period"] = self.time_period
+
+            if self.has_pagination:
+                since, until = self._fetch_time_based_pagination_range(
+                    context,
+                    min_since=self.min_start_date,
+                    max_until=self.max_end_date,
+                    max_time_window=self.max_time_window,
+                )
+                params["since"] = since
+                params["until"] = until
+
         return params
 
     def parse_response(self, response: requests.Response) -> Iterable[dict]:
@@ -866,6 +871,7 @@ class UserInsightsLifetimeStream(UserInsightsStream):
     replication_key = None
     time_period = "lifetime"
     has_pagination = False
+    next_page_token_jsonpath = None  # Do not follow paging for lifetime metrics
 
 
 class UserInsightsOnlineFollowersStream(UserInsightsLifetimeStream):

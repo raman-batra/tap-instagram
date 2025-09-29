@@ -1,5 +1,6 @@
 """Stream type classes for tap-instagram."""
 
+import urllib.parse
 from datetime import datetime, timedelta
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -864,11 +865,11 @@ class UserInsightsOnlineFollowersStream(UserInsightsStream):
     """Define custom stream."""
 
     name = "user_insights_online_followers"
+    replication_key = None
+
     metrics = ["online_followers"]
     time_period = "lifetime"
     has_pagination = False
-    replication_key = None
-    # TODO: Add note about online_followers seemingly only going back 30 days
 
 
 # class UserInsightsAudienceStream(UserInsightsStream):
@@ -899,12 +900,7 @@ class UserInsightsDailyStream(UserInsightsStream):
 
     name = "user_insights_daily"
     metrics = [
-        "email_contacts",
-        "get_directions_clicks",
-        "impressions",
-        "phone_call_clicks",
         "reach",
-        "text_message_clicks",
     ]
     time_period = "day"
 

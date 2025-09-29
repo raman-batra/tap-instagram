@@ -106,8 +106,4 @@ class TapInstagram(Tap):
 
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""
-        return [
-            stream_class(tap=self, ig_user_id=ig_user_id)
-            for stream_class in STREAM_TYPES
-            for ig_user_id in self.ig_user_ids
-        ]
+        return [stream_class(tap=self) for stream_class in STREAM_TYPES]

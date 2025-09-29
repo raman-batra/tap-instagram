@@ -16,14 +16,7 @@ from tap_instagram.client import InstagramStream
 class UsersStream(InstagramStream):
     """Define custom stream."""
 
-    def __init__(self, tap, ig_user_id: str, **kwargs):
-        self.ig_user_id = ig_user_id
-        super().__init__(tap, **kwargs)
-
-    @property
-    def name(self) -> str:
-        return f"users_{self.ig_user_id}"
-
+    name = "users"
     path = "/{user_id}"
     primary_keys = ["id"]
     replication_key = None
@@ -39,6 +32,7 @@ class UsersStream(InstagramStream):
     # Optionally, you may also use `schema_filepath` in place of `schema`:
     # schema_filepath = SCHEMAS_DIR / "users.json"
     schema = th.PropertiesList(
+        th.Property("ig_user_id", th.StringType),
         th.Property("id", th.StringType),
         th.Property("ig_id", th.IntegerType),
         th.Property("name", th.StringType),
@@ -50,7 +44,8 @@ class UsersStream(InstagramStream):
 
     @property
     def partitions(self) -> List[dict]:
-        return [{"user_id": self.ig_user_id}]
+        """Return a list of partitions."""
+        return [{"user_id": user_id} for user_id in self.tap.ig_user_ids]
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]
@@ -59,6 +54,11 @@ class UsersStream(InstagramStream):
         params["fields"] = ",".join(self.fields)
         return params
 
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Add ig_user_id to records."""
+        row["ig_user_id"] = context["user_id"]
+        return row
+
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         return {"user_id": record["id"]}
 
@@ -66,14 +66,7 @@ class UsersStream(InstagramStream):
 class MediaStream(InstagramStream):
     """Define custom stream."""
 
-    def __init__(self, tap, ig_user_id: str, **kwargs):
-        self.ig_user_id = ig_user_id
-        super().__init__(tap, **kwargs)
-
-    @property
-    def name(self) -> str:
-        return f"media_{self.ig_user_id}"
-
+    name = "media"
     path = "/{user_id}/media"  # user_id is populated using child context keys from UsersStream
     parent_stream_type = UsersStream
     primary_keys = ["id"]
@@ -99,6 +92,7 @@ class MediaStream(InstagramStream):
     # Optionally, you may also use `schema_filepath` in place of `schema`:
     # schema_filepath = SCHEMAS_DIR / "users.json"
     schema = th.PropertiesList(
+        th.Property("ig_user_id", th.StringType),
         th.Property(
             "id",
             th.StringType,
@@ -210,9 +204,14 @@ class MediaStream(InstagramStream):
         params["since"] = self.make_since_param(context)
         return params
 
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Add ig_user_id to records."""
+        row["ig_user_id"] = context["user_id"]
+        return row
+
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         return {
-            # "user_id": context["user_id"],
+            "user_id": context["user_id"],
             "media_id": record["id"],
             "media_type": record["media_type"],
             # media_product_type not present for carousel children media
@@ -231,14 +230,7 @@ class MediaStream(InstagramStream):
 class StoriesStream(InstagramStream):
     """Define custom stream."""
 
-    def __init__(self, tap, ig_user_id: str, **kwargs):
-        self.ig_user_id = ig_user_id
-        super().__init__(tap, **kwargs)
-
-    @property
-    def name(self) -> str:
-        return f"stories_{self.ig_user_id}"
-
+    name = "stories"
     path = "/{user_id}/stories"  # user_id is populated using child context keys from UsersStream
     parent_stream_type = UsersStream
     primary_keys = ["id"]
@@ -262,6 +254,7 @@ class StoriesStream(InstagramStream):
     # Optionally, you may also use `schema_filepath` in place of `schema`:
     # schema_filepath = SCHEMAS_DIR / "users.json"
     schema = th.PropertiesList(
+        th.Property("ig_user_id", th.StringType),
         th.Property(
             "id",
             th.StringType,
@@ -363,9 +356,14 @@ class StoriesStream(InstagramStream):
         params["fields"] = ",".join(self.fields)
         return params
 
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Add ig_user_id to records."""
+        row["ig_user_id"] = context["user_id"]
+        return row
+
     def get_child_context(self, record: dict, context: Optional[dict]) -> dict:
         return {
-            # "user_id": context["user_id"],
+            "user_id": context["user_id"],
             "media_id": record["id"],
             "media_type": record["media_type"],
             # media_product_type not present for carousel children media
@@ -384,10 +382,7 @@ class StoriesStream(InstagramStream):
 class MediaChildrenStream(MediaStream):
     """Define custom stream."""
 
-    @property
-    def name(self) -> str:
-        return f"media_children_{self.ig_user_id}"
-
+    name = "media_children"
     parent_stream_type = MediaStream
     state_partitioning_keys = ["user_id"]
     path = "/{media_id}/children"  # media_id is populated using child context keys from MediaStream
@@ -420,14 +415,7 @@ class MediaChildrenStream(MediaStream):
 class MediaInsightsStream(InstagramStream):
     """Define custom stream."""
 
-    def __init__(self, tap, ig_user_id: str, **kwargs):
-        self.ig_user_id = ig_user_id
-        super().__init__(tap, **kwargs)
-
-    @property
-    def name(self) -> str:
-        return f"media_insights_{self.ig_user_id}"
-
+    name = "media_insights"
     path = "/{media_id}/insights"
     parent_stream_type = MediaStream
     state_partitioning_keys = ["user_id"]
@@ -436,6 +424,7 @@ class MediaInsightsStream(InstagramStream):
     records_jsonpath = "$.data[*]"
 
     schema = th.PropertiesList(
+        th.Property("ig_user_id", th.StringType),
         th.Property(
             "id",
             th.StringType,
@@ -477,6 +466,11 @@ class MediaInsightsStream(InstagramStream):
             description="",
         ),
     ).to_dict()
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Add ig_user_id to records."""
+        row["ig_user_id"] = context["user_id"]
+        return row
 
     @staticmethod
     def _metrics_for_media_type(media_type: str, media_product_type: str):
@@ -603,14 +597,7 @@ class MediaInsightsStream(InstagramStream):
 class StoryInsightsStream(InstagramStream):
     """Define custom stream."""
 
-    def __init__(self, tap, ig_user_id: str, **kwargs):
-        self.ig_user_id = ig_user_id
-        super().__init__(tap, **kwargs)
-
-    @property
-    def name(self) -> str:
-        return f"story_insights_{self.ig_user_id}"
-
+    name = "story_insights"
     path = "/{media_id}/insights"
     parent_stream_type = StoriesStream
     state_partitioning_keys = ["user_id"]
@@ -619,6 +606,7 @@ class StoryInsightsStream(InstagramStream):
     records_jsonpath = "$.data[*]"
 
     schema = th.PropertiesList(
+        th.Property("ig_user_id", th.StringType),
         th.Property(
             "id",
             th.StringType,
@@ -660,6 +648,11 @@ class StoryInsightsStream(InstagramStream):
             description="",
         ),
     ).to_dict()
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Add ig_user_id to records."""
+        row["ig_user_id"] = context["user_id"]
+        return row
 
     @staticmethod
     def _metrics_for_media_type(media_type: str, media_product_type: str):
@@ -758,10 +751,6 @@ class StoryInsightsStream(InstagramStream):
 
 
 class UserInsightsStream(InstagramStream):
-    def __init__(self, tap, ig_user_id: str, **kwargs):
-        self.ig_user_id = ig_user_id
-        super().__init__(tap, **kwargs)
-
     parent_stream_type = UsersStream
     path = "/{user_id}/insights"  # user_id is populated using child context keys from UsersStream
     primary_keys = ["id"]
@@ -777,6 +766,7 @@ class UserInsightsStream(InstagramStream):
     # Optionally, you may also use `schema_filepath` in place of `schema`:
     # schema_filepath = SCHEMAS_DIR / "users.json"
     schema = th.PropertiesList(
+        th.Property("ig_user_id", th.StringType),
         th.Property(
             "id",
             th.StringType,
@@ -818,6 +808,11 @@ class UserInsightsStream(InstagramStream):
             description="",
         ),
     ).to_dict()
+
+    def post_process(self, row: dict, context: Optional[dict] = None) -> Optional[dict]:
+        """Add ig_user_id to records."""
+        row["ig_user_id"] = context["user_id"]
+        return row
 
     def _fetch_time_based_pagination_range(
         self,
@@ -908,10 +903,7 @@ class UserInsightsStream(InstagramStream):
 class UserInsightsOnlineFollowersStream(UserInsightsStream):
     """Define custom stream."""
 
-    @property
-    def name(self) -> str:
-        return f"user_insights_online_followers_{self.ig_user_id}"
-
+    name = "user_insights_online_followers"
     metrics = ["online_followers"]
     time_period = "lifetime"
     # TODO: Add note about online_followers seemingly only going back 30 days
@@ -934,10 +926,7 @@ class UserInsightsOnlineFollowersStream(UserInsightsStream):
 class UserInsightsFollowersStream(UserInsightsStream):
     """Define custom stream."""
 
-    @property
-    def name(self) -> str:
-        return f"user_insights_followers_{self.ig_user_id}"
-
+    name = "user_insights_followers"
     metrics = ["follower_count"]
     time_period = "day"
     min_start_date = pendulum.now("UTC").subtract(days=30)
@@ -946,10 +935,7 @@ class UserInsightsFollowersStream(UserInsightsStream):
 class UserInsightsDailyStream(UserInsightsStream):
     """Define custom stream."""
 
-    @property
-    def name(self) -> str:
-        return f"user_insights_daily_{self.ig_user_id}"
-
+    name = "user_insights_daily"
     metrics = [
         "email_contacts",
         "get_directions_clicks",
@@ -966,10 +952,7 @@ class UserInsightsDailyStream(UserInsightsStream):
 class UserInsightsWeeklyStream(UserInsightsStream):
     """Define custom stream."""
 
-    @property
-    def name(self) -> str:
-        return f"user_insights_weekly_{self.ig_user_id}"
-
+    name = "user_insights_weekly"
     metrics = [
         "impressions",
         "reach",
@@ -980,10 +963,7 @@ class UserInsightsWeeklyStream(UserInsightsStream):
 class UserInsights28DayStream(UserInsightsStream):
     """Define custom stream."""
 
-    @property
-    def name(self) -> str:
-        return f"user_insights_28day_{self.ig_user_id}"
-
+    name = "user_insights_28day"
     metrics = [
         "impressions",
         "reach",

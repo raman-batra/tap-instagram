@@ -45,7 +45,7 @@ class UsersStream(InstagramStream):
     @property
     def partitions(self) -> List[dict]:
         """Return a list of partitions."""
-        return [{"user_id": user_id} for user_id in self.tap.ig_user_ids]
+        return [{"user_id": user_id} for user_id in self._tap.ig_user_ids]
 
     def get_url_params(
         self, context: Optional[dict], next_page_token: Optional[Any]

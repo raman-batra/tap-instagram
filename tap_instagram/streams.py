@@ -477,7 +477,7 @@ class MediaInsightsStream(InstagramStream):
             if media_product_type == "STORY":
                 return [
                     "exits",
-                    "impressions",
+                    "views",
                     "reach",
                     "replies",
                     "taps_forward",
@@ -487,7 +487,7 @@ class MediaInsightsStream(InstagramStream):
                 return [
                     "comments",
                     "likes",
-                    "plays",
+                    "views",
                     "reach",
                     "saved",
                     "shares",
@@ -495,7 +495,7 @@ class MediaInsightsStream(InstagramStream):
                 ]
             else:  # media_product_type is "AD" or "FEED"
                 metrics = [
-                    "impressions",
+                    "views",
                     "reach",
                 ]
                 if media_type == "VIDEO":
@@ -503,11 +503,7 @@ class MediaInsightsStream(InstagramStream):
                 return metrics
         elif media_type == "CAROUSEL_ALBUM":
             return [
-                "carousel_album_engagement",
-                "carousel_album_impressions",
-                "carousel_album_reach",
-                "carousel_album_saved",
-                "video_views",
+                "views",
             ]
         else:
             raise ValueError(
@@ -646,7 +642,7 @@ class StoryInsightsStream(InstagramStream):
     def _metrics_for_media_type(media_type: str, media_product_type: str):
         # Story insights are simple and don't vary by media type (IMAGE/VIDEO)
         return [
-            "impressions",
+            "views",
             "reach",
             "replies",
         ]

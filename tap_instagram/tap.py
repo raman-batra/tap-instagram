@@ -54,9 +54,14 @@ class TapInstagram(Tap):
             description="A user access token",
         ),
         th.Property(
-            "ig_user_ids",
-            th.ArrayType(th.StringType),
-            description="User IDs of the Instagram accounts to replicate",
+            "locations",
+            th.ArrayType(
+                th.ObjectType(
+                    th.Property("id", th.StringType, required=True),
+                    th.Property("name", th.StringType, required=False),
+                )
+            ),
+            description="List of objects with Instagram user account id (required) and name (optional, for reference only)",
         ),
         th.Property(
             "media_insights_lookback_days",
@@ -83,10 +88,11 @@ class TapInstagram(Tap):
         ),
     ).to_dict()
 
-    def _get_ig_user_ids(self) -> List[str]:
-        if self.config.get("ig_user_ids"):
-            return self.config["ig_user_ids"]
-        self.logger.info("`ig_user_ids` not found in config, fetching from API.")
+    def _get_locations(self) -> List[str]:
+        if self.config.get("locations"):
+            # Accepts list of objects with "id" and optional "name"
+            return [obj["id"] for obj in self.config["locations"] if "id" in obj]
+        self.logger.info("`locations` not found in config, fetching from API.")
         url = "https://graph.facebook.com/me/accounts"
         params = {"access_token": self.config["access_token"]}
         response = requests.get(url, params=params)
@@ -109,8 +115,8 @@ class TapInstagram(Tap):
         return ids
 
     @property
-    def ig_user_ids(self) -> List[str]:
-        return self._get_ig_user_ids()
+    def locations(self) -> List[str]:
+        return self._get_locations()
 
     def discover_streams(self) -> List[Stream]:
         """Return a list of discovered streams."""

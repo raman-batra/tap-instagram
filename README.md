@@ -31,7 +31,7 @@ Those sources are spread across a few additional streams since they support vary
 amounts of historical data, etc. The following section outlines some important information, but defer to the API docs 
 linked above for more detail.
 
-* **Users:** IG User objects representing the Instagram Business or Creator Accounts from the `ig_user_ids` config 
+* **Users:** IG User objects representing the Instagram Business or Creator Accounts from the `locations` config 
 parameter.
   * **Replication Method:** Full Table
 * **Media:** IG Media objects representing media published by a given IG User.
@@ -82,9 +82,23 @@ text_message_clicks, website_clicks.
 
 **The tap accepts the following config options:**
 
-- **`ig_user_ids: List[str]` (optional)**: A list of user IDs for the Instagram Business or Creator accounts you want to sync. If you don't provide this, the tap will automatically discover all Instagram accounts associated with your `access_token`.
+- **`locations: List[object]` (optional)**: A list of objects for the Instagram Business or Creator accounts you want to sync. Each object must have an `"id"` (required, the user ID as a string) and may have a `"name"` (optional, for reference only). If you don't provide this, the tap will automatically discover all Instagram accounts associated with your `access_token`.
 
 - **`access_token: str` (required)**: A long-lived **user access token**. You can get one by following [these instructions](https://developers.facebook.com/docs/pages/access-tokens).
+
+#### Example configuration
+
+```json
+{
+  "access_token": "<YOUR_LONG_LIVED_USER_ACCESS_TOKEN>",
+  "locations": [
+    { "id": "id_1", "name": "Account Name 1" },
+    { "id": "id_2" }
+  ]
+}
+```
+- If you omit `locations`, the tap will auto-discover all accessible Instagram accounts.
+```
 
   **NOTE: You will need to create a Facebook App if you do not have one already to be able to generate an access token.**
 

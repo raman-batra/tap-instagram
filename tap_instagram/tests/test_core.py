@@ -13,9 +13,9 @@ CONFIG_PATH = ".secrets/config.json"
 if os.getenv("CI"):  # true when running a GitHub Actions workflow
     SAMPLE_CONFIG = {
         "access_token": os.getenv("TAP_INSTAGRAM_ACCESS_TOKEN"),
-        "ig_user_ids": [
-            int(os.getenv("TAP_INSTAGRAM_USER_ID"))
-        ],  # TODO: Accept arrays here
+        "locations": [
+            {"id": str(os.getenv("TAP_INSTAGRAM_USER_ID"))}
+        ],  # Accepts array of objects with "id" (string) and optional "name"
     }
 else:
     SAMPLE_CONFIG = read_json_file(CONFIG_PATH)

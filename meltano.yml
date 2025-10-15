@@ -13,7 +13,8 @@ plugins:
     - catalog
     - discover
     settings:
-    - name: ig_user_ids
+    - name: locations
+      kind: array
     - name: access_token
       kind: password
     - name: start_date

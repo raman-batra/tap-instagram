@@ -85,24 +85,47 @@ class InstagramStream(RESTStream):
         yield from extract_jsonpath(self.records_jsonpath, input=response.json())
 
     def validate_response(self, response: requests.Response) -> None:
-        error_message = str(response.json().get("error", {}).get("message"))
-        if response.status_code == 400:
-            self.logger.warning(
-                f"Skipping record due to 400 error: {response.json().get('error', {}).get('message', '')} for path: {self.path}"
-            )
+        """
+        Custom error handling for Instagram API responses.
+        Gracefully handle 400, 502, and 503 by logging and skipping.
+        """
+        status = response.status_code
+
+        # Handle 400, 502, 503 gracefully: log and skip
+        if status in (400, 502, 503):
+            try:
+                # Try to extract error message if JSON, else fallback to text
+                error_message = ""
+                try:
+                    error_message = response.json().get("error", {}).get("message", "")
+                except Exception:
+                    error_message = response.text.strip()
+                self.logger.warning(
+                    f"Skipping record due to {status} error: {error_message} for path: {self.path}"
+                )
+            except Exception:
+                self.logger.warning(
+                    f"Skipping record due to {status} error (unable to extract error message) for path: {self.path}"
+                )
             return
 
-        elif 400 < response.status_code < 500:
+        # Handle other 4xx as Fatal
+        elif 400 < status < 500:
+            try:
+                error_message = response.json().get("error", {}).get("message", "")
+            except Exception:
+                error_message = response.text.strip()
             msg = (
-                f"{response.status_code} Client Error: "
-                f"{response.reason} - {response.json()['error']['message']}"
+                f"{status} Client Error: "
+                f"{response.reason} - {error_message}"
                 f" for path: {self.path}"
             )
             raise FatalAPIError(msg)
 
-        elif 500 <= response.status_code < 600:
+        # Handle other 5xx as Retriable
+        elif 500 <= status < 600:
             msg = (
-                f"{response.status_code} Server Error: "
+                f"{status} Server Error: "
                 f"{response.reason} for path: {self.path}"
             )
             raise RetriableAPIError(msg)
